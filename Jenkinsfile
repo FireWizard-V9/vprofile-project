@@ -3,7 +3,7 @@ pipeline {
 
     tools {
         maven "MAVEN3.9"
-        jdk "JDK17"  // Default JDK for build and tests
+        jdk "JDK11"  // Now using JDK 11 for all stages
     }
 
     environment {
@@ -18,6 +18,8 @@ pipeline {
         NEXUS_LOGIN = 'nexuslogin'
         SONARSERVER = 'sonarserver'
         SONARSCANNER = tool name: 'sonarscanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+        JAVA_HOME = '/usr/lib/jvm/java-11-openjdk-amd64'  // Ensure JDK 11 is used
+        PATH = "$JAVA_HOME/bin:$PATH"
     }
 
     stages {
@@ -51,15 +53,10 @@ pipeline {
             }
         }
 
-        // ✅ Switch to JDK 11 for Sonar Analysis
         stage('Sonar Analysis') {
-            environment {
-                JAVA_HOME = '/usr/lib/jvm/java-11-openjdk-amd64'  // Set JDK 11 for this stage
-                PATH = "$JAVA_HOME/bin:$PATH"
-            }
             steps {
                 script {
-                    sh 'java -version'  // Verify Java version is switched
+                    sh 'java -version'  // Verify Java 11 is active
                 }
                 withSonarQubeEnv("${SONARSERVER}") {
                     sh '''${SONARSCANNER}/bin/sonar-scanner \
