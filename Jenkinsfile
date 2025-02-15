@@ -3,7 +3,7 @@ pipeline {
 
     tools {
         maven "MAVEN3.9"
-        jdk "JDK17"  // Ensure JDK 17 is used for build and tests
+        jdk "JDK17"  // Default JDK for build and tests
     }
 
     environment {
@@ -17,7 +17,7 @@ pipeline {
         NEXUS_GRP_REPO = 'vpro-maven-group'
         NEXUS_LOGIN = 'nexuslogin'
         SONARSERVER = 'sonarserver'
-        SONARSCANNER = tool 'sonarscanner'
+        SONARSCANNER = tool name: 'sonarscanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
     }
 
     stages {
@@ -53,14 +53,13 @@ pipeline {
 
         // ✅ Switch to JDK 11 for Sonar Analysis
         stage('Sonar Analysis') {
+            environment {
+                JAVA_HOME = '/usr/lib/jvm/java-11-openjdk-amd64'  // Set JDK 11 for this stage
+                PATH = "$JAVA_HOME/bin:$PATH"
+            }
             steps {
                 script {
-                    echo "Switching to JDK 11 for Sonar Analysis"
-                    sh '''
-                    export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
-                    export PATH=$JAVA_HOME/bin:$PATH
-                    java -version  # Verify Java version is switched
-                    '''
+                    sh 'java -version'  // Verify Java version is switched
                 }
                 withSonarQubeEnv("${SONARSERVER}") {
                     sh '''${SONARSCANNER}/bin/sonar-scanner \
@@ -68,11 +67,19 @@ pipeline {
                         -Dsonar.projectName=vprofile \
                         -Dsonar.projectVersion=1.0 \
                         -Dsonar.sources=src/ \
-                        -Dsonar.java.binaries=target/test-classes/com/visualpathit/account/controllerTest/ \
+                        -Dsonar.java.binaries=target/classes/ \
                         -Dsonar.junit.reportsPath=target/surefire-reports/ \
                         -Dsonar.jacoco.reportsPath=target/jacoco.exec \
                         -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml'''
                 }
+            }
+        }
+    }
+
+    post {
+        always {
+            script {
+                echo "Pipeline completed."
             }
         }
     }
