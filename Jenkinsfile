@@ -3,7 +3,7 @@ pipeline {
 
     tools {
         maven "MAVEN3.9"
-        jdk "JDK17"  // Now using JDK 17 for all stages
+        jdk "JDK17"  // Using JDK 17 for all stages
     }
 
     environment {
@@ -18,7 +18,7 @@ pipeline {
         NEXUS_LOGIN = 'nexuslogin'
         SONARSERVER = 'sonarserver'
         SONARSCANNER = tool name: 'sonarscanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-        JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'  // Ensure JDK 17 is used
+        JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'  // Ensuring JDK 17 is used
         PATH = "$JAVA_HOME/bin:$PATH"
     }
 
@@ -80,12 +80,32 @@ pipeline {
                 }
             }
         }
+
+        stage("Upload Artifact") {
+            steps {
+                nexusArtifactUploader(
+                    nexusVersion: 'nexus3',
+                    protocol: 'http',
+                    nexusUrl: "${NEXUSIP}:${NEXUSPORT}",
+                    groupId: 'QA',
+                    version: "${env.BUILD_NUMBER}",  // Using BUILD_NUMBER as version
+                    repository: "${RELEASE_REPO}",
+                    credentialsId: "${NEXUS_LOGIN}",  // Fixed incorrect syntax
+                    artifacts: [
+                        [artifactId: 'vproapp',
+                        classifier: '',
+                        file: 'target/vprofile-v2.war',
+                        type: 'war']
+                    ]
+                )
+            }
+        }
     }
 
     post {
         always {
             script {
-                echo "Pipeline completed."
+                echo "✅ Pipeline completed."
             }
         }
     }
