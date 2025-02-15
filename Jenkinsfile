@@ -43,7 +43,7 @@ pipeline {
                 sh 'mvn -s settings.xml checkstyle:checkstyle'
             }
         }
-        // sonar changes
+        // sonar 
 
         stage('Sonar Analysis') {
             environment {
