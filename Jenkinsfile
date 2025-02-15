@@ -3,9 +3,9 @@ pipeline {
 
     tools {
         maven "MAVEN3.9"
-        jdk "JDK11"
+        jdk "JDK17"  // Ensure JDK 17 is used for build and tests
     }
-    
+
     environment {
         SNAP_REPO = 'vprofile-snapshot'
         NEXUS_USER = 'admin'
@@ -17,13 +17,19 @@ pipeline {
         NEXUS_GRP_REPO = 'vpro-maven-group'
         NEXUS_LOGIN = 'nexuslogin'
         SONARSERVER = 'sonarserver'
-        SONARSCANNER = tool 'sonarscanner'  // Fixed incorrect variable usage
+        SONARSCANNER = tool 'sonarscanner'
     }
 
     stages {
+        stage('Verify Java Version') {
+            steps {
+                sh 'java -version'
+            }
+        }
+
         stage('Build') {
             steps {
-                sh 'mvn -s settings.xml -DskipTests install'
+                sh 'mvn -s settings.xml clean install -DskipTests'
             }
             post {
                 success {
@@ -45,9 +51,17 @@ pipeline {
             }
         }
 
-        // Sonar Analysis
+        // ✅ Switch to JDK 11 for Sonar Analysis
         stage('Sonar Analysis') {
             steps {
+                script {
+                    echo "Switching to JDK 11 for Sonar Analysis"
+                    sh '''
+                    export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+                    export PATH=$JAVA_HOME/bin:$PATH
+                    java -version  # Verify Java version is switched
+                    '''
+                }
                 withSonarQubeEnv("${SONARSERVER}") {
                     sh '''${SONARSCANNER}/bin/sonar-scanner \
                         -Dsonar.projectKey=vprofile \
@@ -61,5 +75,5 @@ pipeline {
                 }
             }
         }
-    } // Closing stages block
-} // Closing pipeline block
+    }
+}
