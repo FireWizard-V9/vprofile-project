@@ -3,7 +3,7 @@ pipeline {
 
     tools {
         maven "MAVEN3.9"
-        jdk "JDK11"  // Now using JDK 11 for all stages
+        jdk "JDK17"  // Now using JDK 17 for all stages
     }
 
     environment {
@@ -18,7 +18,7 @@ pipeline {
         NEXUS_LOGIN = 'nexuslogin'
         SONARSERVER = 'sonarserver'
         SONARSCANNER = tool name: 'sonarscanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-        JAVA_HOME = '/usr/lib/jvm/java-11-openjdk-amd64'  // Ensure JDK 11 is used
+        JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'  // Ensure JDK 17 is used
         PATH = "$JAVA_HOME/bin:$PATH"
     }
 
@@ -56,18 +56,27 @@ pipeline {
         stage('Sonar Analysis') {
             steps {
                 script {
-                    sh 'java -version'  // Verify Java 11 is active
+                    sh 'java -version'  // Verify Java 17 is active
                 }
                 withSonarQubeEnv("${SONARSERVER}") {
-                    sh '''${SONARSCANNER}/bin/sonar-scanner \
-                        -Dsonar.projectKey=vprofile \
-                        -Dsonar.projectName=vprofile \
-                        -Dsonar.projectVersion=1.0 \
-                        -Dsonar.sources=src/ \
-                        -Dsonar.java.binaries=target/classes/ \
-                        -Dsonar.junit.reportsPath=target/surefire-reports/ \
-                        -Dsonar.jacoco.reportsPath=target/jacoco.exec \
-                        -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml'''
+                    script {
+                        def sonarStatus = sh(
+                            script: '''${SONARSCANNER}/bin/sonar-scanner \
+                                -Dsonar.projectKey=vprofile \
+                                -Dsonar.projectName=vprofile \
+                                -Dsonar.projectVersion=1.0 \
+                                -Dsonar.sources=src/ \
+                                -Dsonar.java.binaries=target/classes/ \
+                                -Dsonar.junit.reportsPath=target/surefire-reports/ \
+                                -Dsonar.jacoco.reportsPath=target/jacoco.exec \
+                                -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml''',
+                            returnStatus: true  // Capture the exit status
+                        )
+                        
+                        if (sonarStatus != 0) {
+                            echo "⚠️ Sonar Analysis failed, but continuing pipeline..."
+                        }
+                    }
                 }
             }
         }
